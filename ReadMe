@@ -23,3 +23,12 @@ Overview:
 =====
 Please also find the detailed instructions in the comments of the individual files.
 Web Graph data is from http://snap.stanford.edu/data/web-Stanford.html
+
+**** STEPS FOR EXECUTION ****
+
+first call make data;
+ then ./datatrim
+ then make main
+ then mpirun -np <num_processors> ./main
+ then make serialtester
+ then ./serialtester

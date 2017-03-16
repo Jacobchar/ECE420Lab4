@@ -1,9 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include "Lab4_IO.h"
-
-
 /*
     Test the result stored in "data_output" against a serial implementation.
 
@@ -26,13 +20,14 @@
 #include <stdlib.h>
 #include <math.h>
 #include "Lab4_IO.h"
+#include "timer.h"
 
 #define EPSILON 0.00001
 #define DAMPING_FACTOR 0.85
+
 #define THRESHOLD 0.0001
 
 int main (int argc, char* argv[]){
-
     struct node *nodehead;
     int nodecount;
     int *num_in_links, *num_out_links;
@@ -47,12 +42,13 @@ int main (int argc, char* argv[]){
     FILE *fp;
 
     double time_start, time_end;
-
+    
     // Load the data and simple verification
     if ((fp = fopen("data_input", "r")) == NULL ){
     	printf("Error loading the data_input.\n");
         return 253;
     }
+
     fscanf(fp, "%d\n%lf\n", &collected_nodecount, &error);
     if (get_node_stat(&nodecount, &num_in_links, &num_out_links)) return 254;
     if (nodecount != collected_nodecount){
@@ -93,10 +89,12 @@ int main (int argc, char* argv[]){
     //printf("Program converges at %d th iteration.\n", iterationcount);
 
     GET_TIME(time_end);
-	Lab4SaveOutput(&r, nodecount, (time_end - time_start));
+	Lab4_saveoutput(r, nodecount, (time_end - time_start));
 
     // post processing
     node_destroy(nodehead, nodecount);
     free(num_in_links); free(num_out_links);
-
 }
+
+
+
