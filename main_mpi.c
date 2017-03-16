@@ -42,36 +42,55 @@ int main (int argc, char* argv[]){
     FILE *fp;
 
     double time_start, time_end;
-    
-    // Load the data and simple verification
-    if ((fp = fopen("data_input", "r")) == NULL ){
-    	printf("Error loading the data_input.\n");
-        return 253;
-    }
 
-    fscanf(fp, "%d\n%lf\n", &collected_nodecount, &error);
-    if (get_node_stat(&nodecount, &num_in_links, &num_out_links)) return 254;
-    if (nodecount != collected_nodecount){
-        printf("Problem size does not match!\n");
-        free(num_in_links); free(num_out_links);
-        return 2;
-    }
-    collected_r = malloc(collected_nodecount * sizeof(double));
-    for ( i = 0; i < collected_nodecount; ++i)
-        fscanf(fp, "%lf\n", &collected_r[i]);
-    fclose(fp);
-
-    // Adjust the threshold according to the problem size
-    cst_addapted_threshold = THRESHOLD;
-    
  	GET_TIME(time_start);
 
-    // Calculate the result
-    if (node_init(&nodehead, num_in_links, num_out_links, 0, nodecount)) return 254;
+    // Parallelization Initialization
+    int npes, myrank;
+
+    MPI_Init(&argc, &argv);
+    MPI_Comm_size(MPI_COMM_WORLD, &npes);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
+    if(myrank == 0){
+    	// Calculate the result
+	    if (node_init(&nodehead, num_in_links, num_out_links, 0, nodecount)) return 254;
+	    
+	    r = malloc(nodecount * sizeof(double));
+	    r_pre = malloc(nodecount * sizeof(double));
+
+	    // Load the data and simple verification
+	    if ((fp = fopen("data_input", "r")) == NULL ){
+	    	printf("Error loading the data_input.\n");
+	        return 253;
+	    }
+
+	    fscanf(fp, "%d\n%lf\n", &collected_nodecount, &error);
+	    if (get_node_stat(&nodecount, &num_in_links, &num_out_links)) return 254;
+	    if (nodecount != collected_nodecount){
+	        printf("Problem size does not match!\n");
+	        free(num_in_links); free(num_out_links);
+	        return 2;
+	    }
+	    collected_r = malloc(collected_nodecount * sizeof(double));
+	    for ( i = 0; i < collected_nodecount; ++i)
+	        fscanf(fp, "%lf\n", &collected_r[i]);
+	    fclose(fp);
+
+	    // Adjust the threshold according to the problem size
+	    cst_addapted_threshold = THRESHOLD;
+
+    }
     
-    r = malloc(nodecount * sizeof(double));
-    r_pre = malloc(nodecount * sizeof(double));
-    for ( i = 0; i < nodecount; ++i)
+    double* rec_buf = (double *)malloc((nodecount/npes) * sizeof(double));
+
+
+    MPI_Scatter(r, nodecount, MPI_DOUBLE, rec_buf, nodecount/npes, MPI_DOUBLE, MPI_COMM_WORLD);
+
+
+
+    // i = myrank; i < ((myrank * nodecount/npes) + nodecount/npes)
+    for ( i = (myrank * nodecount/npes); i < ((myrank * nodecount/npes) + nodecount/npes); ++i)
         r[i] = 1.0 / nodecount;
     damp_const = (1.0 - DAMPING_FACTOR) / nodecount;
     // CORE CALCULATION
@@ -88,10 +107,25 @@ int main (int argc, char* argv[]){
     }while(rel_error(r, r_pre, nodecount) >= EPSILON);
     //printf("Program converges at %d th iteration.\n", iterationcount);
 
+   
+/** ******************** FIX THIS ***************************
+   
+    MPI_Allgather(, nodecount, MPI_DOUBLE, rec_buf, nodecount/npes, MPI_DOUBLE, MPI_COMM_WORLD);
+
+	*********************************************************
+**/
+
     GET_TIME(time_end);
 	Lab4_saveoutput(r, nodecount, (time_end - time_start));
 
     // post processing
+    if(myrank == 0){
+    	free(r);
+    	free(r_pre);
+    }
+    free(rec_buf);
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Finalize();
     node_destroy(nodehead, nodecount);
     free(num_in_links); free(num_out_links);
 }
