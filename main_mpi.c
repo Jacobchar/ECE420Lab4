@@ -55,8 +55,6 @@ int main (int argc, char* argv[]){
 
     if(myrank == 0){
     	
-	    r = malloc(nodecount * sizeof(double));
-	    r_pre = malloc(nodecount * sizeof(double));
 
 	    // Load the data and simple verification
 	    if ((fp = fopen("data_input", "r")) == NULL ){
@@ -78,6 +76,10 @@ int main (int argc, char* argv[]){
 
 	    // Adjust the threshold according to the problem size
 	    cst_addapted_threshold = THRESHOLD;
+
+        r = malloc(nodecount * sizeof(double));
+        r_pre = malloc(nodecount * sizeof(double));
+
 
         // Calculate the result
         if (node_init(&nodehead, num_in_links, num_out_links, 0, nodecount)) return 254;
@@ -111,15 +113,13 @@ int main (int argc, char* argv[]){
     //printf("Program converges at %d th iteration.\n", iterationcount);
 
    
-/** ******************** FIX THIS ***************************
-   
-    MPI_Allgather(, nodecount, MPI_DOUBLE, rec_buf, nodecount/npes, MPI_DOUBLE, MPI_COMM_WORLD);
+  
+    MPI_Allgather(r, nodecount/npes, MPI_DOUBLE, rec_buf, nodecount/npes, MPI_DOUBLE, MPI_COMM_WORLD);
 
-	*********************************************************
-**/
+
 
     GET_TIME(time_end);
-	Lab4_saveoutput(r, nodecount, (time_end - time_start));
+	Lab4_saveoutput(rec_buf, nodecount, (time_end - time_start));
 
     // post processing
     if(myrank == 0){
