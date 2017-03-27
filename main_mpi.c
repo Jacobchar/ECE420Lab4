@@ -54,9 +54,7 @@ int main (int argc, char* argv[]){
     MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
     if(myrank == 0){
-    	// Calculate the result
-	    if (node_init(&nodehead, num_in_links, num_out_links, 0, nodecount)) return 254;
-	    
+    	
 	    r = malloc(nodecount * sizeof(double));
 	    r_pre = malloc(nodecount * sizeof(double));
 
@@ -81,12 +79,16 @@ int main (int argc, char* argv[]){
 	    // Adjust the threshold according to the problem size
 	    cst_addapted_threshold = THRESHOLD;
 
+        // Calculate the result
+        if (node_init(&nodehead, num_in_links, num_out_links, 0, nodecount)) return 254;
+        
+
     }
     
     double* rec_buf = (double *)malloc((nodecount/npes) * sizeof(double));
 
 
-    MPI_Scatter(r, nodecount, MPI_DOUBLE, rec_buf, nodecount/npes, MPI_DOUBLE, MPI_COMM_WORLD);
+    MPI_Scatter(r, nodecount, MPI_DOUBLE, rec_buf, nodecount/npes, MPI_DOUBLE,0, MPI_COMM_WORLD);
 
 
 
