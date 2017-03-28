@@ -49,6 +49,8 @@ int main (int argc, char* argv[]){
     if (get_node_stat(&nodecount, &num_in_links, &num_out_links)) return 254;
     if (nodecount != collected_nodecount){
         printf("Problem size does not match!\n");
+        printf("%d\n", nodecount);
+        printf("%d\n", collected_nodecount);
         free(num_in_links); free(num_out_links);
         return 2;
     }

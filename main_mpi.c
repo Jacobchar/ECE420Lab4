@@ -36,11 +36,9 @@ int main (int argc, char* argv[]){
     int i, j;
     double damp_const;
     int iterationcount = 0;
-    int collected_nodecount;
-    double *collected_r;
+
     double cst_addapted_threshold;
     double error;
-    FILE *fp;
 
     double time_start, time_end;
 
@@ -53,80 +51,55 @@ int main (int argc, char* argv[]){
     MPI_Comm_size(MPI_COMM_WORLD, &npes);
     MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
-    if(myrank == 0){
-    	
+    get_node_stat(&nodecount, &num_in_links, &num_out_links);
+    node_init(&nodehead, num_in_links, num_out_links, 0, nodecount);
 
-	    // Load the data and simple verification
-	    if ((fp = fopen("data_input", "r")) == NULL ){
-	    	printf("Error loading the data_input.\n");
-	        return 253;
-	    }
+    double* piece_buf = malloc(nodecount/npes * sizeof(double));
 
-	    fscanf(fp, "%d\n%lf\n", &collected_nodecount, &error);
-	    if (get_node_stat(&nodecount, &num_in_links, &num_out_links)) return 254;
-	    if (nodecount != collected_nodecount){
-	        printf("Problem size does not match!\n");
-	        free(num_in_links); free(num_out_links);
-	        return 2;
-	    }
-	    collected_r = malloc(collected_nodecount * sizeof(double));
-	    for ( i = 0; i < collected_nodecount; ++i)
-	        fscanf(fp, "%lf\n", &collected_r[i]);
-	    fclose(fp);
-
-	    // Adjust the threshold according to the problem size
-	    cst_addapted_threshold = THRESHOLD;
-
-        r = malloc(nodecount * sizeof(double));
-        r_pre = malloc(nodecount * sizeof(double));
-
-
-        // Calculate the result
-        if (node_init(&nodehead, num_in_links, num_out_links, 0, nodecount)) return 254;
-        
-
-    }
-    
-    double* rec_buf = (double *)malloc((nodecount/npes) * sizeof(double));
-
-
-    MPI_Scatter(r, nodecount, MPI_DOUBLE, rec_buf, nodecount/npes, MPI_DOUBLE,0, MPI_COMM_WORLD);
-
-
+    r = malloc(nodecount * sizeof(double));
+    r_pre = malloc(nodecount * sizeof(double));
 
     // i = myrank; i < ((myrank * nodecount/npes) + nodecount/npes)
-    for ( i = (myrank * nodecount/npes); i < ((myrank * nodecount/npes) + nodecount/npes); ++i)
+    for (i=0; i < nodecount; i++ ){
         r[i] = 1.0 / nodecount;
+    }
     damp_const = (1.0 - DAMPING_FACTOR) / nodecount;
     // CORE CALCULATION
+    int proper_index;
+
     do{
         ++iterationcount;
         vec_cp(r, r_pre, nodecount);
-        for ( i = 0; i < nodecount; ++i){
-            r[i] = 0;
+        for (i = myrank * nodecount/npes; i < (myrank*(nodecount/npes) + nodecount/npes); ++i){
+            proper_index = i - (myrank * nodecount/npes);
+            piece_buf[proper_index] = 0;
             for ( j = 0; j < nodehead[i].num_in_links; ++j)
-                r[i] += r_pre[nodehead[i].inlinks[j]] / num_out_links[nodehead[i].inlinks[j]];
-            r[i] *= DAMPING_FACTOR;
-            r[i] += damp_const;
+                piece_buf[proper_index] += r_pre[nodehead[i].inlinks[j]] / num_out_links[nodehead[i].inlinks[j]];
+            piece_buf[proper_index] *= DAMPING_FACTOR;
+            piece_buf[proper_index] += damp_const;
+
         }
-    }while(rel_error(r, r_pre, nodecount) >= EPSILON);
+        MPI_Allgather(piece_buf, nodecount/npes, MPI_DOUBLE, r, nodecount/npes, MPI_DOUBLE, MPI_COMM_WORLD);
+        if(myrank == 0){
+            error = rel_error(r, r_pre, nodecount) ;
+        }
+        MPI_Bcast(&error, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    }while(error >= EPSILON);
     //printf("Program converges at %d th iteration.\n", iterationcount);
 
    
-  
-    MPI_Allgather(r, nodecount/npes, MPI_DOUBLE, rec_buf, nodecount/npes, MPI_DOUBLE, MPI_COMM_WORLD);
 
 
 
-    GET_TIME(time_end);
-	Lab4_saveoutput(rec_buf, nodecount, (time_end - time_start));
 
     // post processing
     if(myrank == 0){
-    	free(r);
-    	free(r_pre);
+        GET_TIME(time_end);
+        Lab4_saveoutput(r, nodecount, (time_end - time_start));
     }
-    free(rec_buf);
+    free(r);
+    free(piece_buf);
+    free(r_pre);
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
     node_destroy(nodehead, nodecount);
