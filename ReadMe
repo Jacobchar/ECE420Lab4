@@ -26,9 +26,28 @@ Web Graph data is from http://snap.stanford.edu/data/web-Stanford.html
 
 **** STEPS FOR EXECUTION ****
 
-first call make data;
- then ./datatrim
- then make main
- then mpirun -np <num_processors> ./main
- then make serialtester
- then ./serialtester
+first call:
+	make data;
+then:
+	./datatrim
+then:
+	make main
+then:
+	mpirun -np <num_processors> ./main
+then:
+	make serialtester
+then:
+	./serialtester
+
+To run the Serial version of our program without mpi:
+	make data;
+then:
+	./datatrim
+then:
+	make main_serial
+then:
+	./main_serial
+then:
+	make serialtester
+then:
+	./serialtester

@@ -21,7 +21,7 @@
 #include <math.h>
 #include "Lab4_IO.h"
 #include "timer.h"
-#include "mpi.h"
+#include <mpi.h>
 
 #define EPSILON 0.00001
 #define DAMPING_FACTOR 0.85
@@ -42,7 +42,7 @@ int main (int argc, char* argv[]){
 
     double time_start, time_end;
 
- 	GET_TIME(time_start);
+ 	
 
     // Parallelization Initialization
     int npes, myrank;
@@ -66,7 +66,7 @@ int main (int argc, char* argv[]){
     damp_const = (1.0 - DAMPING_FACTOR) / nodecount;
     // CORE CALCULATION
     int proper_index;
-
+	GET_TIME(time_start);
     do{
         ++iterationcount;
         vec_cp(r, r_pre, nodecount);
@@ -80,11 +80,11 @@ int main (int argc, char* argv[]){
 
         }
         MPI_Allgather(piece_buf, nodecount/npes, MPI_DOUBLE, r, nodecount/npes, MPI_DOUBLE, MPI_COMM_WORLD);
-        if(myrank == 0){
-            error = rel_error(r, r_pre, nodecount) ;
-        }
-        MPI_Bcast(&error, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    }while(error >= EPSILON);
+//        if(myrank == 0){
+//            error = rel_error(r, r_pre, nodecount) ;
+//        }
+//        MPI_Bcast(&error, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    }while(rel_error(r, r_pre, nodecount) >= EPSILON);
     //printf("Program converges at %d th iteration.\n", iterationcount);
 
    
@@ -93,12 +93,12 @@ int main (int argc, char* argv[]){
 
 
     // post processing
-    if(myrank == 0){
+   // if(myrank == 0){
         GET_TIME(time_end);
         Lab4_saveoutput(r, nodecount, (time_end - time_start));
-    }
+   // }
     free(r);
-    free(piece_buf);
+    //free(piece_buf);
     free(r_pre);
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
