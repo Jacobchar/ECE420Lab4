@@ -79,7 +79,7 @@ echo "Evaluating the results..."
                 let ATTEMPT+=1
 		        echo -n "Attempt Number $ATTEMPT: "
                 rm -f data_output
-		        mpirun -np $CORE ./$mainEX >/dev/null
+		        mpirun -np $CORE -f "hostlist" ./$mainEX
                 ./$srltstEX
                 stat=$?
                 if [[ $stat -eq "0" ]]; then
