@@ -87,21 +87,23 @@ int main (int argc, char* argv[]){
     }while(rel_error(r, r_pre, nodecount) >= EPSILON);
     //printf("Program converges at %d th iteration.\n", iterationcount);
 
-   
+
 
 
 
 
     // post processing
-   // if(myrank == 0){
+   if(myrank == 0){
         GET_TIME(time_end);
         Lab4_saveoutput(r, nodecount, (time_end - time_start));
-   // }
-    free(r);
-    //free(piece_buf);
-    free(r_pre);
+   }
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
+
     node_destroy(nodehead, nodecount);
     free(num_in_links); free(num_out_links);
+    free(r);
+    free(piece_buf);
+    free(r_pre);
+    return 0;
 }
